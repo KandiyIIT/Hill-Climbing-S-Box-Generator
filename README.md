@@ -1,4 +1,4 @@
-# WHS Hill Climbing S Box Generator
+# WHS Hill Climbing S-Box Generator
 Header-only multithread c++17 implementation of hill climbing method for s-box generation task with WHS cost function. Usage example:
 
 ```cpp
