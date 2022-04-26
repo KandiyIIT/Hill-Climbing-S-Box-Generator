@@ -2,6 +2,9 @@
 Header-only multithread c++17 implementation of hill climbing method for s-box generation task with WHS cost function. Usage example:
 
 ```cpp
+    #include "hill_climbing.h"
+    #include "utils.h"
+
     sbox::hill_climbing_info_t<uint64_t> info;
 
     info.thread_count = 8;
