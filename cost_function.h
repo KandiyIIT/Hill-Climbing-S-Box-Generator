@@ -87,18 +87,21 @@ namespace sbox {
 
 			for (int i = 0;i < 256;i++)
 			{
-				T val = (spectre[i] >= 0) ? spectre[i] : -spectre[i];
+				if (spectre[i] < 0)
+					spectre[i] = -spectre[i];
+
+				T val = ((spectre[i]-data->x) >= 0) ? (spectre[i]-data->x) : -(spectre[i]-data->x);
 
 				assert(((void)"error: absolute spectre value less 0", val > 0));
 
 				T part = 1;
 
 				for (int k = 0; k < data->r; k++)
-					part *= (val - data->x);
+					part *= val;
 				cost.cost += part;
 
-				if (val > max_spectre)
-					max_spectre = static_cast<int32_t>(val);
+				if (spectre[i] > max_spectre)
+					max_spectre = spectre[i];
 			}
 		}
 
