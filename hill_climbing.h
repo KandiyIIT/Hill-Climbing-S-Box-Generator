@@ -44,7 +44,7 @@ namespace sbox {
 		cost_info_t<T> new_cost;
 
 		for (int i = 0; i < info.try_per_thread; i++) {
-			params.iteration.fetch_add(1);	// Увеличиваем количество итераций в цикле поиска на единицу
+			params.iteration.fetch_add(1);
 
 			int pos_1 = 0;
 			int pos_2 = 0;
