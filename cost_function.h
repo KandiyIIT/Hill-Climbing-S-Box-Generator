@@ -33,21 +33,15 @@ namespace sbox {
 	static void fwht(uint8_t* truth_table, int* spectre)
 	{
 		int step = 1;
-
-		for (int i = 0;i < 256;i++)
+		for (int i = 0; i < 256; i++)
 			spectre[i] = -2 * truth_table[255 - i] + 1;
-
-		while (step < 256)
-		{
+		while (step < 256) {
 			int left = 0;
 			int numOfBlocks = (256 / (step * 2));
-
-			for (int i = 0;i < numOfBlocks;i++)
-			{
+			for (int i = 0; i < numOfBlocks; i++) {
 				int right = left + step;
 
-				for (int j = 0;j < step;j++)
-				{
+				for (int j = 0; j < step; j++) {
 					int a = spectre[right];
 					int b = spectre[left];
 					spectre[left] = a + b;
@@ -55,7 +49,6 @@ namespace sbox {
 					left++;
 					right++;
 				}
-
 				left = right;
 			}
 			step *= 2;
@@ -67,7 +60,7 @@ namespace sbox {
 		WHS cost function
 	*/
 	template <typename T>
-	cost_info_t<T> whs(cost_function_data_t* _data, std::array<uint8_t,256> sbox) {
+	cost_info_t<T> whs(cost_function_data_t* _data, std::array<uint8_t, 256> sbox) {
 		uint8_t truth_table[256];
 		int32_t max_spectre = 0;
 		int spectre[256];
@@ -79,29 +72,31 @@ namespace sbox {
 		cost.cost = 0;
 		for (int b = 1; b < 256; b++)
 		{
-			for (int i = 0;i < 256;i++)
+			for (int i = 0; i < 256; i++)
 				truth_table[i] = one_bits[sbox[i] & b] & 0x01;
 
-			
+
 			fwht(truth_table, spectre);
 
-			for (int i = 0;i < 256;i++)
+			for (int i = 0; i < 256; i++)
 			{
-				if (spectre[i] < 0)
-					spectre[i] = -spectre[i];
+				int spectre_temp = spectre[i];
 
-				T val = ((spectre[i]-data->x) >= 0) ? (spectre[i]-data->x) : -(spectre[i]-data->x);
+				if (spectre_temp < 0)
+					spectre_temp = -spectre_temp;
+
+				T val = ((spectre_temp - data->x) >= 0) ? (spectre_temp - data->x) : -(spectre_temp - data->x);
 
 				assert(((void)"error: absolute spectre value less 0", val > 0));
 
-				T part = 1;
+				T part = val;
 
-				for (int k = 0; k < data->r; k++)
+				for (int k = 1; k < data->r; k++)
 					part *= val;
 				cost.cost += part;
 
-				if (spectre[i] > max_spectre)
-					max_spectre = spectre[i];
+				if (val > max_spectre)
+					max_spectre = static_cast<int32_t>(val);
 			}
 		}
 

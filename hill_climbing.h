@@ -22,7 +22,7 @@ namespace sbox {
 		bool is_log_enabled;
 
 		std::unique_ptr< cost_function_data_t> cost_data;
-		std::function< cost_info_t<T>(cost_function_data_t*,std::array<uint8_t,256>)> cost_function;
+		std::function< cost_info_t<T>(cost_function_data_t*, std::array<uint8_t, 256>)> cost_function;
 	};
 
 	template <typename T>
@@ -32,6 +32,7 @@ namespace sbox {
 		std::mutex sbox_mutex;
 		bool is_found;
 		int32_t frozen_count;
+		std::atomic<uint32_t> iteration;
 	};
 
 	template<typename T>
@@ -42,7 +43,9 @@ namespace sbox {
 		std::array<uint8_t, 256> new_sbox;
 		cost_info_t<T> new_cost;
 
-		for (int i = 0;i < info.try_per_thread; i++) {
+		for (int i = 0; i < info.try_per_thread; i++) {
+			params.iteration.fetch_add(1);	// Увеличиваем количество итераций в цикле поиска на единицу
+
 			int pos_1 = 0;
 			int pos_2 = 0;
 
@@ -63,10 +66,10 @@ namespace sbox {
 				params.best_sbox = new_sbox;
 				params.best_cost = new_cost;
 				params.is_found = true;
-				params.frozen_count = 0;
+				//params.frozen_count = 0;
 
 				if (info.is_log_enabled)
-					std::cout << "cost=" << params.best_cost.cost << " NL=" << params.best_cost.nonlinearity << std::endl;
+					std::cout << "cost=" << params.best_cost.cost << "	NL=" << params.best_cost.nonlinearity << "	iteration=" << params.iteration.load() << std::endl;
 
 				params.sbox_mutex.unlock();
 				return;
@@ -75,6 +78,8 @@ namespace sbox {
 				params.sbox_mutex.lock();
 				params.frozen_count++;
 				if (params.frozen_count > info.max_frozen_count) {
+					if (info.is_log_enabled)
+						std::cout << "iteration=" << params.iteration.load() << "	Search stopped: frozen_count > max_frozen_count" << std::endl;
 					params.sbox_mutex.unlock();
 					return;
 				}
@@ -87,14 +92,14 @@ namespace sbox {
 				return;
 			}
 
-			if (new_cost.cost < params.best_cost.cost) {
+			if (new_cost.cost <= params.best_cost.cost) {
 				params.best_sbox = new_sbox;
 				params.best_cost = new_cost;
 				params.frozen_count = 0;
 
-				if(info.is_log_enabled)
-					std::cout <<"cost=" << params.best_cost.cost<<" NL="<<params.best_cost.nonlinearity << std::endl;
-				
+				if (info.is_log_enabled)
+					std::cout << "cost=" << params.best_cost.cost << "	NL=" << params.best_cost.nonlinearity << "	iteration=" << params.iteration.load() << std::endl;
+
 			}
 			params.sbox_mutex.unlock();
 		}
@@ -102,27 +107,28 @@ namespace sbox {
 	}
 
 	template<typename T>
-	std::optional<std::array<uint8_t,256>> hill_climbing(hill_climbing_info_t<T> &info) {
+	std::optional<std::array<uint8_t, 256>> hill_climbing(hill_climbing_info_t<T>& info) {
 		shared_info_t<T> thread_data;
 		std::random_device rd;
 		std::mt19937 gen(rd());
 		std::uniform_int_distribution<int> distrib(0, 255);
 		std::vector<std::thread> workers;
-		
 
-		for (int i = 0;i <= 255;i++)
+
+		for (int i = 0; i <= 255; i++)
 			thread_data.best_sbox[i] = i;
 
-		for (int i = 255;i > 0;i--) {
+		for (int i = 255; i > 0; i--) {
 			int j = distrib(gen) % i;
 			std::swap(thread_data.best_sbox[i], thread_data.best_sbox[j]);
 		}
 
 		thread_data.is_found = false;
 		thread_data.frozen_count = 0;
+		thread_data.iteration = 0;
 		thread_data.best_cost = info.cost_function(info.cost_data.get(), thread_data.best_sbox);
 
-		for (int i = 0;i < info.thread_count;i++) {
+		for (int i = 0; i < info.thread_count; i++) {
 			workers.push_back(
 				std::thread(&hill_climbing_thread_function<T>,
 					std::ref(thread_data), std::ref(info))
