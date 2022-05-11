@@ -87,7 +87,7 @@ namespace sbox {
 
 				T val = ((spectre_temp - data->x) >= 0) ? (spectre_temp - data->x) : -(spectre_temp - data->x);
 
-				assert(((void)"error: absolute spectre value less 0", val > 0));
+				assert(((void)"error: absolute spectre value less 0", val >= 0));
 
 				T part = val;
 
